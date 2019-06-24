@@ -13,246 +13,131 @@ namespace EFCore.SomeUI
 
         public static void Main(string[] args)
         {
-            //InsertSamurai();
-            //InsertMultipleSamurais();
-            //InsertMultipleDifferentObjects();
-            //SimpleSamuraiQuery();
-            //MoreQueries();
-            //RetrieveAndUpdateSamurai();
-            //RetrieveAndUpdateMultipleSamurai();
-            //QueryAndUpdateBattle_Disconnected();
-            //DeleteUsingId(3);
-            //InsertNewPkFkGraph();
-            //InsertNewPkFkGraphMultipleChildren();
-            //AddChildToExistingObjectWhileNotTracked();
-            //AddChildToExistingObjectWhileNotTracked(1);
-            //EagerLoadSamuraiWithQuotes();
-            //ProjectSomeProperties();
-            //FilteringWithRelatedData();
-            //ModifyingRelatedDataWhenTracked();
-            ModifyingRelatedDataWhenNotTracked();
+            //PrePopulateSamuraisAndBattles();
+            //JoinBattleAndSamurai();
+            //EnlistSamuraiIntoABattle();
+            //EnlistSamuraiIntoABattleUnTracked();
+            //GetSamuraiWithBattles();
+            //RemoveJoinBetweenSamuraiAndBattleSimple();
+            RemoveBattleFromSamurai();
         }
 
-        private static void ModifyingRelatedDataWhenNotTracked()
+        private static void RemoveBattleFromSamurai()
         {
-            var samurai = Context.Samurais.Include(s => s.Quotes)
-                .FirstOrDefault();
-            var quote = samurai.Quotes[0];
-            quote.Text += "Did you hear that?";
+            //Goal: Remove join between Shichiroji(Id-3)
+            //and Battle of Okehazama (Id-1)
+            var samurai = Context.Samurais.Include(s =>
+                    s.SamuraiBattles).ThenInclude(sb => sb.Battle)
+                .SingleOrDefault(s => s.Id == 1);
 
-            using (var newContext = new SamuraiContext(new DbContextOptions<SamuraiContext>()))
-            {
-                //newContext.Quotes.Update(quote);
-                newContext.Entry(quote).State = EntityState.Modified;
-                newContext.SaveChanges();
-            }
-        }
+            var sbToRemove = samurai.SamuraiBattles
+                .SingleOrDefault(sb => sb.BattleId == 1);
 
-        private static void ModifyingRelatedDataWhenTracked()
-        {
-            var samurai = Context.Samurais.Include(s => s.Quotes)
-                .FirstOrDefault();
-            samurai.Quotes[0].Text += "Did you hear that?";
+            samurai.SamuraiBattles.Remove(sbToRemove); //Remove via List<T>
+            //Context.Remove(sbToRemove); // remove using DbContext
+            Context.ChangeTracker.DetectChanges();
             Context.SaveChanges();
         }
 
-        private static void FilteringWithRelatedData()
+        private static void RemoveJoinBetweenSamuraiAndBattleSimple()
         {
-            var samurais = Context.Samurais
-                .Where(s => s.Quotes.Any(q => q.Text.Contains("happy")))
-                .ToList();
+            var join = new SamuraiBattle {BattleId = 1, SamuraiId = 8};
+
+            Context.Remove(join);
+            Context.SaveChanges();
         }
 
-        private static void ProjectSomeProperties()
+        private static void GetSamuraiWithBattles()
         {
-            //load just some specific properties    
-            //var someProperties = Context.Samurais.Select(s =>
-            //    new {s.Id, s.Name, s.Quotes.Count}).ToList();
-            //
-            //var somePropertiesWithSomeQuotes = Context.Samurais
-            //    .Select(s => new
-            //    {
-            //        s.Id, s.Name,
-            //        HappyQuotes = s.Quotes.Where(q => q.Text.Contains("happy"))
-            //    }).ToList();
-            //
-            //var samuraisWithHappyQuotes = Context.Samurais
-            //    .Select(s => new
-            //    {
-            //        Samurai = s,
-            //        Quotes = s.Quotes.Where(q => q.Text.Contains("happy"))
-            //            .ToList()
-            //    }).ToList();
+            var samuraiWithBattles = Context.Samurais
+                .Include(s => s.SamuraiBattles)
+                .ThenInclude(sb => sb.Battle)
+                .FirstOrDefault(s => s.Id == 1);
 
-            var samurai = Context.Samurais.ToList();
-            var happyQuotes = Context.Quotes.Where(q =>
-                q.Text.Contains("happy")).ToList();
-        }
-
-        private static void EagerLoadSamuraiWithQuotes()
-        {
-            var samuraiWithQuotes = Context.Samurais.Include(s => s.Quotes)
-                .ToList();
-        }
-
-        private static void AddChildToExistingObjectWhileNotTracked(int samuraiId)
-        {
-            var quote = new Quote
+            var battle = samuraiWithBattles.SamuraiBattles.First().Battle;
+            var allTheBattles = new List<Battle>();
+            foreach (var samuraiBattle in samuraiWithBattles.SamuraiBattles)
             {
-                SamuraiId = samuraiId,
-                Text = "Now that I saved you, will you feed me dinner?"
+                allTheBattles.Add(samuraiBattle.Battle);
+            }
+        }
+
+        private static void EnlistSamuraiIntoABattleUnTracked()
+        {
+            Battle battle;
+
+            using (var separateOperation = new SamuraiContext(new DbContextOptions<SamuraiContext>()))
+            {
+                battle = separateOperation.Battles.Find(1);
+            }
+
+            battle.SamuraiBattles.Add(new SamuraiBattle{SamuraiId = 2});
+            Context.Battles.Attach(battle);
+            Context.ChangeTracker.DetectChanges();
+            Context.SaveChanges();
+        }
+
+        private static void EnlistSamuraiIntoABattle()
+        {
+            var battle = Context.Battles.Find(1);
+            battle.SamuraiBattles
+                .Add(new SamuraiBattle{SamuraiId = 3});
+            Context.SaveChanges();
+        }
+
+        private static void JoinBattleAndSamurai()
+        {
+            //Kikuchiyo id is 1, Siege of Osaka id is 3
+            var sbJoin = new SamuraiBattle {SamuraiId = 1, BattleId = 3};
+            Context.Add(sbJoin);
+            Context.SaveChanges();
+        }
+
+        private static void PrePopulateSamuraisAndBattles()
+        {
+            var listOfSamurai = new List<Samurai>
+            {
+                new Samurai{Name = "Kikuchiyo"},
+                new Samurai{Name = "Kambei Shimada"},
+                new Samurai{Name = "Shichiroji"},
+                new Samurai{Name = "Katsushiro Okamoto"},
+                new Samurai{Name = "Heihachi Hayashida"},
+                new Samurai{Name = "Kyuzo"},
+                new Samurai{Name = "Gorobei Katayama"},
             };
 
-            using (var newContext = new SamuraiContext(new DbContextOptions<SamuraiContext>()))
+            foreach (var samurai in listOfSamurai)
             {
-                newContext.Quotes.Add(quote);
-                newContext.SaveChanges();
+                Context.Samurais.Add(samurai);
             }
-        }
 
-        private static void AddChildToExistingObjectWhileNotTracked()
-        {
-            var samurai = Context.Samurais.First();
-
-            samurai.Quotes.Add(new Quote
-            {
-                Text = "Now that I saved you, will you feed me dinner?"
-            });
-
-            using (var newContext = new SamuraiContext(new DbContextOptions<SamuraiContext>()))
-            {
-                
-            }
-            
-        }
-
-        private static void InsertNewPkFkGraphMultipleChildren()
-        {
-            var samurai = new Samurai
-            {
-                Name = "Kyuzo",
-                Quotes = new List<Quote>
+            Context.Battles.AddRange(
+                new Battle
                 {
-                    new Quote {Text = "Watch out for my sharp sword!"},
-                    new Quote {Text = "I told you to watch out for the sharp sword. Oh well!"}
-                }
-            };
-            Context.Samurais.Add(samurai);
-            Context.SaveChanges();
-        }
-
-        private static void InsertNewPkFkGraph()
-        {
-            var samurai = new Samurai
-            {
-                Name = "Kambei Shimada",
-                Quotes =  new List<Quote>
+                    Name = "Battle of Okehazama",
+                    StartDate = new DateTime(1560, 05, 01),
+                    EndDate = new DateTime(1560, 06, 15)
+                },
+                new Battle
                 {
-                  new Quote {Text = "I've come to save you"}  
-                }
-            };
-            Context.Samurais.Add(samurai);
+                    Name = "Battle of Shiroyama",
+                    StartDate = new DateTime(1877, 09, 24),
+                    EndDate = new DateTime(1877, 09, 24)
+                },
+                new Battle
+                {
+                    Name = "Siege of Osaka",
+                    StartDate = new DateTime(1614, 01, 01),
+                    EndDate = new DateTime(1615, 12, 31)
+                },
+                new Battle
+                {
+                    Name = "Boshin War",
+                    StartDate = new DateTime(1868, 01, 01),
+                    EndDate = new DateTime(1869, 01, 01)
+                });
+
             Context.SaveChanges();
-        }
-
-        private static void DeleteUsingId(int samuraiId)
-        {
-            var samurai = Context.Samurais.Find(samuraiId);
-            //Context.Remove(samurai);
-            //Context.SaveChanges();
-            
-            //alternate - stored procedure!
-            Context.Database.ExecuteSqlCommand("exec DeleteById {0}",
-                samurai.Id);
-        }
-
-        private static void QueryAndUpdateBattle_Disconnected()
-        {
-            var battle = Context.Battles.FirstOrDefault();
-            battle.EndDate = new DateTime(1560,06,30);
-            using (var newContextInstance = new SamuraiContext(new DbContextOptions<SamuraiContext>()))
-            {
-                newContextInstance.Battles.Update(battle);
-                newContextInstance.SaveChanges();
-            }
-        }
-
-        private static void RetrieveAndUpdateMultipleSamurai()
-        {
-            var samurai = Context.Samurais.ToList();
-            samurai.ForEach(s => s.Name += "San");
-            Context.SaveChanges();
-        }
-
-        private static void RetrieveAndUpdateSamurai()
-        {
-            var samurai = Context.Samurais.FirstOrDefault();
-            samurai.Name += "San";
-            Context.SaveChanges();
-        }
-
-        private static void MoreQueries()
-        {
-            //var name = "Sampson";
-            //var samurai = Context.Samurais
-            //    .Find(4);
-            //
-            //Console.WriteLine(samurai.Id + " " + samurai.Name);
-
-            var samurai = Context.Samurais.Where(s =>
-                    EF.Functions.Like(s.Name,"%O%"))
-                .ToList();
-
-            foreach (var sam in samurai)
-            {
-                Console.WriteLine($"{sam.Id} {sam.Name}");
-            }
-        }
-
-        private static void SimpleSamuraiQuery()
-        {
-            using (var context = new SamuraiContext(new DbContextOptions<SamuraiContext>()))
-            {
-                var samurais = context.Samurais.ToList();
-            }
-        }
-
-        private static void InsertMultipleDifferentObjects()
-        {
-            var samurai = new Samurai {Name = "Oda Nobunaga"};
-            var battle = new Battle
-            {
-                Name = "Battle of Nagashino",
-                StartDate = new DateTime(1575, 06, 16),
-                EndDate = new DateTime(1575, 06, 28)
-            };
-            using (var context = new SamuraiContext(new DbContextOptions<SamuraiContext>()))
-            {
-                context.AddRange(samurai, battle);
-                context.SaveChanges();
-            }
-        }
-
-        private static void InsertSamurai()
-        {
-            var samurai = new Samurai {Name = "Julie"};
-            using (var context = new SamuraiContext(new DbContextOptions<SamuraiContext>()))
-            {
-                context.Samurais.Add(samurai);
-                context.SaveChanges();
-            }
-        }
-
-        private static void InsertMultipleSamurais()
-        {
-            var samurai = new Samurai { Name = "Julie" };
-            var samuraiSammy = new Samurai {Name = "Sampson"};
-
-            using (var context = new SamuraiContext(new DbContextOptions<SamuraiContext>()))
-            {
-                context.Samurais.AddRange(samurai, samuraiSammy);
-                context.SaveChanges();
-            }
         }
     }
 }
