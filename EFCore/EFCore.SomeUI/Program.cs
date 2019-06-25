@@ -2,7 +2,6 @@
 using EFCore.Domain;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace EFCore.SomeUI
@@ -13,129 +12,71 @@ namespace EFCore.SomeUI
 
         public static void Main(string[] args)
         {
-            //PrePopulateSamuraisAndBattles();
-            //JoinBattleAndSamurai();
-            //EnlistSamuraiIntoABattle();
-            //EnlistSamuraiIntoABattleUnTracked();
-            //GetSamuraiWithBattles();
-            //RemoveJoinBetweenSamuraiAndBattleSimple();
-            RemoveBattleFromSamurai();
+            //CreateSamurai();
+            //RetrieveSamuraiCreatedInPastWeek();
+            //CreateThenEditSamuraiWithQuote();
+            GetAllSamurai();
+            //CreateSamuraiWithBetterName();
         }
 
-        private static void RemoveBattleFromSamurai()
+        private static void CreateSamuraiWithBetterName()
         {
-            //Goal: Remove join between Shichiroji(Id-3)
-            //and Battle of Okehazama (Id-1)
-            var samurai = Context.Samurais.Include(s =>
-                    s.SamuraiBattles).ThenInclude(sb => sb.Battle)
-                .SingleOrDefault(s => s.Id == 1);
-
-            var sbToRemove = samurai.SamuraiBattles
-                .SingleOrDefault(sb => sb.BattleId == 1);
-
-            samurai.SamuraiBattles.Remove(sbToRemove); //Remove via List<T>
-            //Context.Remove(sbToRemove); // remove using DbContext
-            Context.ChangeTracker.DetectChanges();
-            Context.SaveChanges();
-        }
-
-        private static void RemoveJoinBetweenSamuraiAndBattleSimple()
-        {
-            var join = new SamuraiBattle {BattleId = 1, SamuraiId = 8};
-
-            Context.Remove(join);
-            Context.SaveChanges();
-        }
-
-        private static void GetSamuraiWithBattles()
-        {
-            var samuraiWithBattles = Context.Samurais
-                .Include(s => s.SamuraiBattles)
-                .ThenInclude(sb => sb.Battle)
-                .FirstOrDefault(s => s.Id == 1);
-
-            var battle = samuraiWithBattles.SamuraiBattles.First().Battle;
-            var allTheBattles = new List<Battle>();
-            foreach (var samuraiBattle in samuraiWithBattles.SamuraiBattles)
+            var samurai = new Samurai
             {
-                allTheBattles.Add(samuraiBattle.Battle);
-            }
-        }
-
-        private static void EnlistSamuraiIntoABattleUnTracked()
-        {
-            Battle battle;
-
-            using (var separateOperation = new SamuraiContext(new DbContextOptions<SamuraiContext>()))
-            {
-                battle = separateOperation.Battles.Find(1);
-            }
-
-            battle.SamuraiBattles.Add(new SamuraiBattle{SamuraiId = 2});
-            Context.Battles.Attach(battle);
-            Context.ChangeTracker.DetectChanges();
-            Context.SaveChanges();
-        }
-
-        private static void EnlistSamuraiIntoABattle()
-        {
-            var battle = Context.Battles.Find(1);
-            battle.SamuraiBattles
-                .Add(new SamuraiBattle{SamuraiId = 3});
-            Context.SaveChanges();
-        }
-
-        private static void JoinBattleAndSamurai()
-        {
-            //Kikuchiyo id is 1, Siege of Osaka id is 3
-            var sbJoin = new SamuraiBattle {SamuraiId = 1, BattleId = 3};
-            Context.Add(sbJoin);
-            Context.SaveChanges();
-        }
-
-        private static void PrePopulateSamuraisAndBattles()
-        {
-            var listOfSamurai = new List<Samurai>
-            {
-                new Samurai{Name = "Kikuchiyo"},
-                new Samurai{Name = "Kambei Shimada"},
-                new Samurai{Name = "Shichiroji"},
-                new Samurai{Name = "Katsushiro Okamoto"},
-                new Samurai{Name = "Heihachi Hayashida"},
-                new Samurai{Name = "Kyuzo"},
-                new Samurai{Name = "Gorobei Katayama"},
+                Name = "Jack le Black",
+                BetterName = new PersonFullName("Jack", "Black")
             };
 
-            foreach (var samurai in listOfSamurai)
-            {
-                Context.Samurais.Add(samurai);
-            }
+            Context.Samurais.Add(samurai);
+            Context.SaveChanges();
+        }
 
-            Context.Battles.AddRange(
-                new Battle
+        private static void GetAllSamurai()
+        {
+            var allSamurai = Context.Samurais.ToList();
+        }
+
+        private static void CreateThenEditSamuraiWithQuote()
+        {
+            var samurai = new Samurai {Name = "Ronin"};
+            var quote = new Quote {Text = "Aren't I Marvelous?"};
+            samurai.Quotes.Add(quote);
+            Context.Samurais.Add(samurai);
+            Context.SaveChanges();
+            quote.Text += "See what I did there?";
+            Context.SaveChanges();
+        }
+
+        private static void RetrieveSamuraiCreatedInPastWeek()
+        {
+            var oneWeekAgo = DateTime.Now.AddDays(-7);
+            //var newSamurais = Context.Samurais
+            //    .Where(s => EF.Property<DateTime>(s, "Created")
+            //                >= oneWeekAgo)
+            //    .ToList();
+
+            var samuraiCreated = Context.Samurais
+                .Where(s => EF.Property<DateTime>(s, "Created")
+                            >= oneWeekAgo)
+                .Select(s => new
                 {
-                    Name = "Battle of Okehazama",
-                    StartDate = new DateTime(1560, 05, 01),
-                    EndDate = new DateTime(1560, 06, 15)
-                },
-                new Battle
-                {
-                    Name = "Battle of Shiroyama",
-                    StartDate = new DateTime(1877, 09, 24),
-                    EndDate = new DateTime(1877, 09, 24)
-                },
-                new Battle
-                {
-                    Name = "Siege of Osaka",
-                    StartDate = new DateTime(1614, 01, 01),
-                    EndDate = new DateTime(1615, 12, 31)
-                },
-                new Battle
-                {
-                    Name = "Boshin War",
-                    StartDate = new DateTime(1868, 01, 01),
-                    EndDate = new DateTime(1869, 01, 01)
-                });
+                    s.Id, s.Name,
+                    Created = EF.Property<DateTime>(s, "Created")
+                }).ToList();
+        }
+
+        private static void CreateSamurai()
+        {
+            var samurai = new Samurai {Name = "Ronin"};
+            Context.Samurais.Add(samurai);
+
+            // We've inserted the shadow properties update logic
+            //into SaveChanges(); in SamuraiConteext
+            //var timeStamp = DateTime.Now;
+            //Context.Entry(samurai).Property("Created")
+            //    .CurrentValue = timeStamp;
+            //Context.Entry(samurai).Property("LastModified")
+            //    .CurrentValue = timeStamp;
 
             Context.SaveChanges();
         }

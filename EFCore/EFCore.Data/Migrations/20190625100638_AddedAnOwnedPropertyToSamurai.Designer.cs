@@ -4,14 +4,16 @@ using EFCore.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace EFCore.Data.Migrations
 {
     [DbContext(typeof(SamuraiContext))]
-    partial class SamuraiContextModelSnapshot : ModelSnapshot
+    [Migration("20190625100638_AddedAnOwnedPropertyToSamurai")]
+    partial class AddedAnOwnedPropertyToSamurai
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -133,11 +135,13 @@ namespace EFCore.Data.Migrations
                                 .ValueGeneratedOnAdd()
                                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                            b1.Property<string>("GivenName")
-                                .HasColumnName("GivenName");
+                            b1.Property<DateTime>("Created");
 
-                            b1.Property<string>("Surname")
-                                .HasColumnName("Surname");
+                            b1.Property<string>("GivenName");
+
+                            b1.Property<DateTime>("LastModified");
+
+                            b1.Property<string>("Surname");
 
                             b1.HasKey("SamuraiId");
 

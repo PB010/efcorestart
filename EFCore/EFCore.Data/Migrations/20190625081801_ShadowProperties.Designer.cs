@@ -4,14 +4,16 @@ using EFCore.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace EFCore.Data.Migrations
 {
     [DbContext(typeof(SamuraiContext))]
-    partial class SamuraiContextModelSnapshot : ModelSnapshot
+    [Migration("20190625081801_ShadowProperties")]
+    partial class ShadowProperties
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -25,11 +27,7 @@ namespace EFCore.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.Property<DateTime>("Created");
-
                     b.Property<DateTime>("EndDate");
-
-                    b.Property<DateTime>("LastModified");
 
                     b.Property<string>("Name");
 
@@ -45,10 +43,6 @@ namespace EFCore.Data.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<DateTime>("Created");
-
-                    b.Property<DateTime>("LastModified");
 
                     b.Property<int>("SamuraiId");
 
@@ -84,10 +78,6 @@ namespace EFCore.Data.Migrations
 
                     b.Property<int>("BattleId");
 
-                    b.Property<DateTime>("Created");
-
-                    b.Property<DateTime>("LastModified");
-
                     b.HasKey("SamuraiId", "BattleId");
 
                     b.HasIndex("BattleId");
@@ -100,10 +90,6 @@ namespace EFCore.Data.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<DateTime>("Created");
-
-                    b.Property<DateTime>("LastModified");
 
                     b.Property<string>("RealName");
 
@@ -123,31 +109,6 @@ namespace EFCore.Data.Migrations
                         .WithMany("Quotes")
                         .HasForeignKey("SamuraiId")
                         .OnDelete(DeleteBehavior.Cascade);
-                });
-
-            modelBuilder.Entity("EFCore.Domain.Samurai", b =>
-                {
-                    b.OwnsOne("EFCore.Domain.PersonFullName", "BetterName", b1 =>
-                        {
-                            b1.Property<int>("SamuraiId")
-                                .ValueGeneratedOnAdd()
-                                .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                            b1.Property<string>("GivenName")
-                                .HasColumnName("GivenName");
-
-                            b1.Property<string>("Surname")
-                                .HasColumnName("Surname");
-
-                            b1.HasKey("SamuraiId");
-
-                            b1.ToTable("Samurais");
-
-                            b1.HasOne("EFCore.Domain.Samurai")
-                                .WithOne("BetterName")
-                                .HasForeignKey("EFCore.Domain.PersonFullName", "SamuraiId")
-                                .OnDelete(DeleteBehavior.Cascade);
-                        });
                 });
 
             modelBuilder.Entity("EFCore.Domain.SamuraiBattle", b =>
